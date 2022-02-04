@@ -1,0 +1,48 @@
+{
+  "title": "BestBuy products",
+  "description": "BestBuy products with full item and price details",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "startUrls": {
+      "title": "Start URLs",
+      "type": "array",
+      "description": "URLs to start with.",
+      "editor": "requestListSources",
+      "prefill": [
+        { "url": "https://www.bestbuy.com/site/promo/tv-deals" }
+      ]
+    },
+    "proxyConfig": {
+      "title": "Proxy configuration",
+      "type": "object",
+      "description": "You need to use Apify proxy or custom proxies.",
+      "prefill": {
+          "useApifyProxy": true
+      },
+      "editor": "proxy"
+    },
+    "maxProducts": {
+      "title": "Max count of products (0 for all)",
+      "type": "integer",
+      "description": "Few (2-3) product in progress might be scraped above this limit",
+      "editor": "number",
+      "default": 0
+    },
+    "addImages": {
+      "title": "Add images",
+      "type": "boolean",
+      "description": "Add links to HD images of each product",
+      "default": true
+    },
+    "addTopReviews": {
+      "title": "Add reviews",
+      "type": "boolean",
+      "description": "Add recommended reviews",
+      "default": true
+    }
+  },
+  "required": [
+    "startUrls", "proxyConfig"
+  ]
+}
