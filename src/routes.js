@@ -23,7 +23,6 @@ const replacePropertyValue = (checkVal, newVal, object) => {
 }
 
 const evalJSInit = (body) => {
-
   const jsPrefix = 'window.__INITIAL_STATE__ = '
   const jsPostfix = '};'
   const i1 = body.indexOf(jsPrefix)
@@ -39,7 +38,7 @@ const evalJSInit = (body) => {
   try {
     rawData = JSON.parse(jsText)
   } catch (err) {
-    log.warning(`CorruptedJSONjsText`)
+    log.warning('CorruptedJSONjsText')
     return
   }
 
@@ -65,27 +64,26 @@ const getProductFromInlineJSON = ($, request, response) => {
       const rawImages = inlineObjects?.find(x => Array.isArray(x))
       images = rawImages ? rawImages.map(x => x?.thumbnailUrl) : undefined
     }
-  
+
     if (addTopReviews) {
       const rawReviews = inlineObjects?.filter(x => x['@type'] === 'Review')
       reviews = rawReviews?.length ? rawReviews : undefined
     }
-  
+
     productObject = productObject ? {
       ...productObject,
       images,
       reviews
     } : null
-  
+
     productObject = omitDeep(productObject, ['@type', '@context', 'itemReviewed', 'publisher', 'bestRating'])
     const removeSchemaUrl = 'http://schema.org/'
     const isSchemaString = value => _.isString(value) && value.startsWith(removeSchemaUrl)
     const removeSchemaPrefix = value => value.substring(removeSchemaUrl.length)
     productObject = replacePropertyValue(isSchemaString, removeSchemaPrefix, productObject)
-  
-    return productObject  
-  }
 
+    return productObject
+  }
 
   // fall back to product defined in window.__INITIAL_STATE__
   const initStateProduct = evalJSInit($.root().html())
@@ -94,11 +92,11 @@ const getProductFromInlineJSON = ($, request, response) => {
     productObject = initStateProduct?.product
     if (addImages) {
       images = productObject?.additionalImages || undefined
-    }  
+    }
     if (addTopReviews) {
       reviews = initStateProduct?.customerReviews?.customerReviews || undefined
       if (reviews) {
-        reviews = omitDeep(reviews, ['syndicationSource' ])
+        reviews = omitDeep(reviews, ['syndicationSource'])
       }
     }
 
@@ -114,13 +112,10 @@ const getProductFromInlineJSON = ($, request, response) => {
 
     return productObject
   }
-
 }
 
 const handleProductData = async (product) => {
-
   await Apify.pushData(product)
-
 }
 
 exports.handleStart = async (context) => {
@@ -161,7 +156,7 @@ exports.handleStart = async (context) => {
     const skuPattern = isDotCom ? `/site/${skuId}.p?skuId=${skuId}` : `/${domainPathPrefix}/product/${skuId}`
     const skuBasedUrl = new URL(skuPattern, domain)
     if (!skuBasedUrl.href.includes('bestbuy')) {
-      log.warning(`Unable to craft product href`, { skuPattern, domain })
+      log.warning('Unable to craft product href', { skuPattern, domain })
       continue
     }
     await requestQueue.addRequest({
@@ -199,4 +194,119 @@ exports.handleDetail = async (context) => {
   }
 
   return handleProductData(product)
+}
+
+const apiRequest = (basedUrl, userData) => {
+  const {
+    domain,
+    id,
+    apiType,
+    lang = 'en-CA',
+    path = '',
+    page = 1
+  } = userData
+  // Full examples
+  // https://www.bestbuy.ca/api/v2/json/search?categoryid=&currentRegion=ON&include=facets%2C%20redirects&lang=en-CA&page=&pageSize=100&path=&query=10389044%2012405503%2014878830%2013015772%2010325890%2014961198%2014196216%2015446669%2014582292%2014961201%2014700331%2010372188&exp=&sortBy=relevance&sortDir=desc
+  // https://www.bestbuy.ca/api/v2/json/sku-collections/217126?categoryid=&currentRegion=ON&include=facets%2C%20redirects&lang=en-CA&page=1&pageSize=24&path=&query=&exp=&sortBy=price&sortDir=asc
+  const craftUrl = new URL(basedUrl)
+  craftUrl.searchParams.set('lang', lang)
+  craftUrl.searchParams.set('page', page)
+  craftUrl.searchParams.delete('path') // weird bug, need to add as a string
+  return {
+    url: `${craftUrl.href}&path=${path}`,
+    userData: { domain, id, apiType, lang, path, page }
+  }
+}
+
+exports.transformUrlToInternalAPI = (startUrlObj) => {
+  // data leak for bestbuy.ca allows just transform
+  // https://www.bestbuy.ca/api/v2/json/sku-collections/217126
+  // https://www.bestbuy.ca/api/v2/json/search?categoryid=30438
+  // if we keep path query parameter, filtering will be applied
+  const urlObj = new URL(startUrlObj.url)
+  const domain = urlObj.origin
+  const pathVariables = new URL(urlObj).pathname.split('/').filter(x => x)
+  const languagePrefix = pathVariables.shift().split('-')
+  let lang
+  if (languagePrefix?.length === 2) {
+    lang = `${languagePrefix[0]}-${languagePrefix[1].toUpperCase()}`
+  }
+  const id = pathVariables.pop()
+  let path = decodeURIComponent(urlObj.searchParams.get('path'))
+  path = encodeURIComponent(path.split('+').join(' '))
+  let apiUrl
+  let apiType
+  if (pathVariables.includes('collection')) {
+    apiUrl = `${urlObj.origin}/api/v2/json/sku-collections/${id}`
+    apiType = 'collection'
+  }
+  if (pathVariables.includes('category')) {
+    apiUrl = `${urlObj.origin}/api/v2/json/search?categoryid=${id}`
+    apiType = 'category'
+  }
+  if (!apiUrl) {
+    log.warning('Unable transformUrlToInternalAPI', startUrlObj)
+    return
+  }
+  // userData ignored for API calls
+  return apiRequest(apiUrl, { domain, id, apiType, lang, path })
+}
+
+exports.handleInternalApiJson = async (context) => {
+  const {
+    request,
+    crawler: { requestQueue },
+    json
+  } = context
+
+  const { url, userData } = request
+
+  const {
+    currentPage,
+    totalPages,
+    products
+  } = json
+
+  if (!products) {
+    throw new Error(`NO API products ${url}`)
+  }
+
+  const { domain } = userData
+
+  const apiProducts = products.map(x => {
+    const url = new URL(x.productUrl, domain).href.replace('.aspx?', '')
+    let product = { url, ...x }
+    product = _.omit(product, ['seoText', 'altLangSeoText', 'hideSavings', 'hideSaleEndDate', 'currentRegion'])
+    product.productUrl = undefined
+    if (product.saleEndDate) {
+      product.saleEndDate = new Date(product.saleEndDate)
+    }
+    return product
+  })
+  await handleProductData(apiProducts)
+
+  // direct request brings a bit more details, probably make no sense to do it, skipped for now
+  /*
+  for (const skuId of products.map(x => x.sku)) {
+    await requestQueue.addRequest({
+      url: `${domain}/${userData.lang}/product/${skuId}`,
+      userData: { dataType: 'product' }
+    },
+    {
+      forefront: true
+    })
+  }
+  */
+
+  if (!(currentPage === 1)) {
+    return
+  }
+
+  // add all other pages as API calls
+  let page = currentPage + 1
+  while (page <= totalPages) {
+    const addApiRequest = apiRequest(url, { ...userData, page })
+    await requestQueue.addRequest(addApiRequest)
+    page++
+  }
 }

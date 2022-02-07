@@ -1,6 +1,5 @@
 const Apify = require('apify')
-const { LOCAL_FILENAME_DIGITS } = require('apify/build/storages/dataset')
-const { handleStart, handleDetail } = require('./src/routes')
+const { handleStart, handleDetail, transformUrlToInternalAPI, handleInternalApiJson } = require('./src/routes')
 
 const { utils: { log } } = Apify
 
@@ -23,8 +22,17 @@ Apify.main(async () => {
   }
 
   const requestList = await Apify.openRequestList('start-urls', startUrls.map(x => {
+    // replace links to collections by api requests
+    const url = x.url.toLowerCase()
+    if (url.startsWith('https://www.bestbuy.ca') && (url.includes('/collection/') || url.includes('/category/'))) {
+      const transformed = transformUrlToInternalAPI(x)
+      if (transformed) {
+        return transformed
+      }
+    }
     return {
       ...x,
+      url,
       userData: { addImages, addTopReviews, ...x?.userData }
     }
   }))
@@ -42,6 +50,7 @@ Apify.main(async () => {
     requestTimeoutSecs,
     handlePageFunction: async (context) => {
       const {
+        json,
         $,
         request: { url, userData }
       } = context
@@ -52,15 +61,16 @@ Apify.main(async () => {
         return handleStart(context)
       } else if ($ && dataType === 'product') {
         return handleDetail(context)
+      } else if (json) {
+        return handleInternalApiJson(context)
       } else {
         log.error('UNHANDLED', { url })
       }
     },
     handleFailedRequestFunction: async (context) => {
       const {
-        error,
-        body,
-        response
+        error
+        // body
       } = context
       log.error(error?.message || error)
       // await Apify.setValue('error', body, { contentType: 'text/html' })
