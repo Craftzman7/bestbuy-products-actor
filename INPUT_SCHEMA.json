@@ -40,6 +40,37 @@
       "type": "boolean",
       "description": "Add recommended reviews",
       "default": true
+    },
+    "maxRequestRetries": {
+      "title": "Max Request Retries",
+      "type": "integer",
+      "description": "Indicates how many times the request is retried",
+      "default": 10,
+      "unit": "times"
+    },
+    "minConcurrency": {
+      "title": "Min Concurrency",
+      "type": "integer",
+      "description": "Sets the minimum concurrency (parallelism) for the crawl",
+      "default": 10,
+      "maximum": 50,
+      "unit": "requests"
+    },
+    "maxConcurrency": {
+      "title": "Max Concurrency",
+      "type": "integer",
+      "description": "Sets the maximum concurrency (parallelism) for the crawl",
+      "default": 20,
+      "maximum": 1000,
+      "unit": "requests"
+    },
+    "handleRequestTimeoutSecs": {
+      "title": "Handle Request Timeout Secs",
+      "type": "integer",
+      "description": "Timeout in which the function passed as handleRequestFunction needs to finish",
+      "default": 30,
+      "maximum": 3600,
+      "unit": "seconds"
     }
   },
   "required": [
