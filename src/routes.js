@@ -203,8 +203,7 @@ const apiRequest = (basedUrl, userData) => {
     apiType,
     lang = 'en-CA',
     path = '',
-    page = 1,
-    count = 0
+    page = 1
   } = userData
   // Full examples
   // https://www.bestbuy.ca/api/v2/json/search?categoryid=&currentRegion=ON&include=facets%2C%20redirects&lang=en-CA&page=&pageSize=100&path=&query=10389044%2012405503%2014878830%2013015772%2010325890%2014961198%2014196216%2015446669%2014582292%2014961201%2014700331%2010372188&exp=&sortBy=relevance&sortDir=desc
@@ -215,7 +214,7 @@ const apiRequest = (basedUrl, userData) => {
   craftUrl.searchParams.delete('path') // weird bug, need to add as a string
   return {
     url: `${craftUrl.href}&path=${path}`,
-    userData: { domain, id, apiType, lang, path, page, count }
+    userData: { domain, id, apiType, lang, path, page }
   }
 }
 
@@ -301,8 +300,7 @@ exports.handleInternalApiJson = async (context, input) => {
 
   // add all other pages as API calls
   let page = currentPage + 1
-  userData.count += apiProducts?.length || 1
-  while (page <= totalPages && (input?.maxProducts === 0 || (input?.maxProducts > 0 && userData.count < input?.maxProducts))) {
+  while (page <= totalPages) {
     const addApiRequest = apiRequest(url, { ...userData, page })
     await requestQueue.addRequest(addApiRequest)
     page++

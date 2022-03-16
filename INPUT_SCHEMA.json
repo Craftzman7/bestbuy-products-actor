@@ -22,7 +22,7 @@
       },
       "editor": "proxy"
     },
-    "maxProducts": {
+    "maxProductsCnt": {
       "title": "Max count of products (0 for all)",
       "type": "integer",
       "description": "Few (2-3) product in progress might be scraped above this limit",

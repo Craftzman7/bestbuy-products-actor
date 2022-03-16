@@ -6,8 +6,6 @@ const { utils: { log } } = Apify
 Apify.main(async () => {
   const input = await Apify.getInput()
 
-  input.maxProducts = parseInt(input.maxProducts) || 0
-
   const {
     proxyConfig = { useApifyProxy: true },
     startUrls,
