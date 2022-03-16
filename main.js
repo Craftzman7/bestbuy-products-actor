@@ -4,6 +4,10 @@ const { handleStart, handleDetail, transformUrlToInternalAPI, handleInternalApiJ
 const { utils: { log } } = Apify
 
 Apify.main(async () => {
+  const input = await Apify.getInput()
+
+  input.maxProducts = parseInt(input.maxProducts) || 0
+
   const {
     proxyConfig = { useApifyProxy: true },
     startUrls,
@@ -14,7 +18,7 @@ Apify.main(async () => {
     maxConcurrency = 20,
     maxRequestRetries = 10,
     requestTimeoutSecs = 30
-  } = await Apify.getInput()
+  } = input
 
   if (!startUrls?.length) {
     log.error('No startUrls data', { startUrls })
@@ -24,7 +28,7 @@ Apify.main(async () => {
   const requestList = await Apify.openRequestList('start-urls', startUrls.map(x => {
     // replace links to collections by api requests
     const url = x.url.toLowerCase()
-    if (url.startsWith('https://www.bestbuy.ca') && (url.includes('/collection/') || url.includes('/category/'))) {
+    if (url.startsWith('https://www.bestbuy.ca') && !url.includes('/api/v2/json') && (url.includes('/collection/') || url.includes('/category/'))) {
       const transformed = transformUrlToInternalAPI(x)
       if (transformed) {
         return transformed
@@ -62,7 +66,7 @@ Apify.main(async () => {
       } else if ($ && dataType === 'product') {
         return handleDetail(context)
       } else if (json) {
-        return handleInternalApiJson(context)
+        return handleInternalApiJson(context, input)
       } else {
         log.error('UNHANDLED', { url })
       }
