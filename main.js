@@ -1,85 +1,90 @@
-const Apify = require('apify')
-const { handleStart, handleDetail, transformUrlToInternalAPI, handleInternalApiJson } = require('./src/routes')
+const Apify = require('apify');
+const { handleStart, handleDetail, handleApiDetails, transformUrlToInternalAPI, handleInternalApiJson } = require('./src/routes');
 
-const { utils: { log } } = Apify
+const { utils: { log } } = Apify;
 
 Apify.main(async () => {
-  const input = await Apify.getInput()
+    const input = await Apify.getInput();
 
-  const {
-    proxyConfig = { useApifyProxy: true },
-    startUrls,
-    addImages = true,
-    addTopReviews = true,
-    maxProductsCnt = 0,
-    minConcurrency = 10,
-    maxConcurrency = 20,
-    maxRequestRetries = 10,
-    requestTimeoutSecs = 30
-  } = input
+    const {
+        proxyConfig = { useApifyProxy: true },
+        startUrls,
+        addImages = true,
+        addTopReviews = true,
+        maxProductsCnt = 0,
+        minConcurrency = 10,
+        maxConcurrency = 20,
+        maxRequestRetries = 10,
+        requestTimeoutSecs = 30,
+    } = input;
 
-  if (!startUrls?.length) {
-    log.error('No startUrls data', { startUrls })
-    return
-  }
+    if (!startUrls?.length) {
+        log.error('No startUrls data', { startUrls });
+        return;
+    }
 
-  const requestList = await Apify.openRequestList('start-urls', startUrls.map(x => {
+    const requestList = await Apify.openRequestList('start-urls', startUrls.map((x) => {
     // replace links to collections by api requests
-    const url = x.url.toLowerCase()
-    if (url.startsWith('https://www.bestbuy.ca') && !url.includes('/api/v2/json') && (url.includes('/collection/') || url.includes('/category/'))) {
-      const transformed = transformUrlToInternalAPI(x)
-      if (transformed) {
-        return transformed
-      }
-    }
-    return {
-      ...x,
-      url,
-      userData: { addImages, addTopReviews, ...x?.userData }
-    }
-  }))
-  const requestQueue = await Apify.openRequestQueue()
-  const proxyConfiguration = await Apify.createProxyConfiguration({ ...proxyConfig, countryCode: proxyConfig?.countryCode || 'US' })
+        const url = x.url.toLowerCase();
+        // eslint-disable-next-line max-len
+        if (url.startsWith('https://www.bestbuy.ca') && !url.includes('/api/v2/json') && (url.includes('/collection/') || url.includes('/category/'))) {
+            const transformed = transformUrlToInternalAPI(x);
+            if (transformed) {
+                return transformed;
+            }
+        }
+        return {
+            ...x,
+            url,
+            userData: { addImages, addTopReviews, ...x?.userData },
+        };
+    }));
+    const requestQueue = await Apify.openRequestQueue();
+    const proxyConfiguration = await Apify.createProxyConfiguration({ ...proxyConfig, countryCode: proxyConfig?.countryCode || 'US' });
 
-  const crawler = new Apify.CheerioCrawler({
-    requestList,
-    requestQueue,
-    proxyConfiguration,
-    maxRequestsPerCrawl: maxProductsCnt ? startUrls.length + maxProductsCnt + 1 : undefined,
-    minConcurrency,
-    maxConcurrency,
-    maxRequestRetries,
-    requestTimeoutSecs,
-    handlePageFunction: async (context) => {
-      const {
-        json,
-        $,
-        request: { url, userData }
-      } = context
+    const crawler = new Apify.CheerioCrawler({
+        requestList,
+        requestQueue,
+        proxyConfiguration,
+        maxRequestsPerCrawl: maxProductsCnt ? startUrls.length + maxProductsCnt + 1 : undefined,
+        minConcurrency,
+        maxConcurrency,
+        maxRequestRetries,
+        requestTimeoutSecs,
+        handlePageFunction: async (context) => {
+            const {
+                json,
+                $,
+                request: { url, userData },
+            } = context;
 
-      const { dataType } = userData
+            const { dataType } = userData;
 
-      if ($ && !dataType) {
-        return handleStart(context)
-      } else if ($ && dataType === 'product') {
-        return handleDetail(context)
-      } else if (json) {
-        return handleInternalApiJson(context, input)
-      } else {
-        log.error('UNHANDLED', { url })
-      }
-    },
-    handleFailedRequestFunction: async (context) => {
-      const {
-        error
-        // body
-      } = context
-      log.error(error?.message || error)
-      // await Apify.setValue('error', body, { contentType: 'text/html' })
-    }
-  })
+            if ($ && !dataType) {
+                return handleStart(context);
+            }
+            if ($ && dataType === 'product') {
+                return handleDetail(context);
+            }
+            if (json && dataType === 'productApiDetails') {
+                return handleApiDetails(context);
+            }
+            if (json) {
+                return handleInternalApiJson(context, input);
+            }
+            log.error('UNHANDLED', { url });
+        },
+        handleFailedRequestFunction: async (context) => {
+            const {
+                error,
+                // body
+            } = context;
+            log.error(error?.message || error);
+            // await Apify.setValue('error', body, { contentType: 'text/html' })
+        },
+    });
 
-  log.info('Starting the crawl.')
-  await crawler.run()
-  log.info('Crawl finished.')
-})
+    log.info('Starting the crawl.');
+    await crawler.run();
+    log.info('Crawl finished.');
+});

@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"description": "BestBuy products with full item and price details",
 	"dependencies": {
-		"apify": "^2.2.0",
+		"apify": "^2.3.2",
 		"omit-deep-lodash": "^1.1.6",
 		"standard": "^14.3.1"
 	},
