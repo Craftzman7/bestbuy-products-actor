@@ -334,9 +334,6 @@ exports.handleApiDetails = async (context) => {
         return;
     }
     const details = Object.values(rawData)?.[0]?.value;
-    if (product.images?.length) {
-        details.images = undefined;
-    }
     if (details?.operationalAttributes) {
         details.fromManufacturer = details.operationalAttributes;
         details.operationalAttributes = undefined;
@@ -345,5 +342,6 @@ exports.handleApiDetails = async (context) => {
         ...product,
         ...details,
         skuId: undefined,
+        images: product.images || details.images,
     });
 };
