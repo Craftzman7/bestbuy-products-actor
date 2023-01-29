@@ -27,7 +27,8 @@
       "type": "integer",
       "description": "Few (2-3) product in progress might be scraped above this limit",
       "editor": "number",
-      "default": 0
+      "default": 100,
+      "prefill": 100
     },
     "addImages": {
       "title": "Add images",
