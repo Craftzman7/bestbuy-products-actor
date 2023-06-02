@@ -21,6 +21,12 @@ You can certainly use the official Best Buy API to download product information 
 
 Best Buy Products Scraper consumes 1 compute unit per 1,000 results. That means you will pay approx. 25 cents for 1,000 results.
 
+## Need to find product pairs between BestBuy and another online shop?
+
+Try our [AI Product Matcher](https://apify.com/equidem/ai-product-matcher). This AI model was created to compare items from different web stores, identifying exact matches and comparing real-time data obtained via web scraping. With the AI Product Matcher, you can scrape product data and then use it to monitor product matches across the industry, implement dynamic pricing for your website, replace or complement manual mapping, and obtain realistic estimates against your competition for upcoming promo campaigns. 
+
+Most importantly, it is relatively easy to get started with (just follow [this Product Matcher guide](https://blog.apify.com/product-matching-ai-pricing-intelligence-web-scraping/)), and it can check 1,000 pairs of products for just $10.
+
 ## Input
 
 - Insert the category URL from the 'Shop deals by category' section of the Best Buy website.
