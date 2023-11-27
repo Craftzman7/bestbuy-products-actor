@@ -343,7 +343,6 @@ exports.handleApiDetails = async (context) => {
         // Format it so each spec is an object with a key and value
         spec.key = spec.displayName;
         spec.value = spec.values.join(', ');
-        console.log(spec);
     }
     await Apify.pushData({
         ...product,
