@@ -339,7 +339,7 @@ exports.handleApiDetails = async (context) => {
         details.operationalAttributes = undefined;
     }
     // Format specifications correctly
-    for (const spec of rawData?.[0]?.value.specifications || []) {
+    for (const spec of details.specifications || []) {
         // Format it so each spec is an object with a key and value
         spec.key = spec.displayName;
         spec.value = spec.values.join(', ');
