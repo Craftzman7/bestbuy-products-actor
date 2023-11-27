@@ -127,6 +127,12 @@ const handleProductData = async (product) => {
                 dataType: 'productApiDetails',
             },
         });
+        // Format specifications correctly
+        for (const spec of product.specifications) {
+            // Format it so each spec is an object with a key and value
+            spec.key = spec.displayName;
+            spec.value = spec.values.join(', ');
+        }
         return;
     }
     await Apify.pushData(product);
