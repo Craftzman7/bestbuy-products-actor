@@ -127,8 +127,9 @@ const handleProductData = async (product) => {
                 dataType: 'productApiDetails',
             },
         });
+        console.log(product)
         // Format specifications correctly
-        for (const spec of product.specifications) {
+        for (const spec of product.skus?.[0]?.value.specifications || []) {
             // Format it so each spec is an object with a key and value
             spec.key = spec.displayName;
             spec.value = spec.values.join(', ');
