@@ -127,12 +127,6 @@ const handleProductData = async (product) => {
                 dataType: 'productApiDetails',
             },
         });
-        // Format specifications correctly
-        for (const spec of product.skus?.[0]?.value.specifications || []) {
-            // Format it so each spec is an object with a key and value
-            spec.key = spec.displayName;
-            spec.value = spec.values.join(', ');
-        }
         return;
     }
     await Apify.pushData(product);
@@ -343,6 +337,12 @@ exports.handleApiDetails = async (context) => {
     if (details?.operationalAttributes) {
         details.fromManufacturer = details.operationalAttributes;
         details.operationalAttributes = undefined;
+    }
+    // Format specifications correctly
+    for (const spec of rawData?.[0]?.value.specifications || []) {
+        // Format it so each spec is an object with a key and value
+        spec.key = spec.displayName;
+        spec.value = spec.values.join(', ');
     }
     await Apify.pushData({
         ...product,
